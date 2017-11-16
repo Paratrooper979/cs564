@@ -150,7 +150,15 @@ const void BTreeIndex::startScan(const void* lowValParm,
 	highOp = highOpParm;
 
 	//TODO: traverse the B+tree to get the leaf node of low value
+	currentPageNum = rootPageNum;
+	bufMgr->readPage(file, currentPageNum, currentPageData);
+	NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
+	int i;
+	for (i = 0; i < INTARRAYNONLEAFSIZE; i++) {
+		if(lowValInt < curr->keyArray[i]) {
 
+		}
+	}
 
 }
 
