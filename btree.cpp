@@ -143,24 +143,79 @@ const void BTreeIndex::startScan(const void* lowValParm,
 	if(lowValParm > highValParm) {
 		throw BadScanrangeException();
 	}
-	scanExecuting = true;
 	lowValInt = *((int *) lowValParm);
 	highValInt = *((int *) highValParm);
 	lowOp = lowOpParm;
 	highOp = highOpParm;
 
 	//TODO: traverse the B+tree to get the leaf node of low value
-	currentPageNum = rootPageNum;
-	bufMgr->readPage(file, currentPageNum, currentPageData);
-	NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
-	int i;
-	for (i = 0; i < INTARRAYNONLEAFSIZE; i++) {
-		if(lowValInt < curr->keyArray[i]) {
+//	currentPageNum = rootPageNum;
+//	bufMgr->readPage(file, currentPageNum, currentPageData);
+//	NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
+//	int i;
+//	for (i = 0; i < INTARRAYNONLEAFSIZE; i++) {
+//		if(lowValInt < curr->keyArray[i]) {
+//			break;
+//		}
+//	}
+//	currentPageNum = curr->pageNoArray[i]; //get the pointer to next node
 
+	currentPageNum = rootPageNum;
+	NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
+	getLowLeaf(currentPageNum, lowValInt, curr->level);
+
+	LeafNodeInt *leaf = (LeafNodeInt *) currentPageData;
+	int i;
+	bool found = false;
+	for (i = 0; i < INTARRAYLEAFSIZE; i++) {
+		if(lowValInt == leaf->keyArray[i]) {
+			nextEntry = i + 1;
+			found = true;
 		}
 	}
 
+	if(!found) {
+		throw NoSuchKeyFoundException();
+	}
+	scanExecuting = true;
 }
+
+	/**
+	 *
+	 * @param currPageNum the leaf page number to be returned
+	 * @param lowVal
+	 * @param level
+	 */
+void BTreeIndex::getLowLeaf(PageId currPageNum, int lowVal, int level) {
+
+	if(level == 1) {
+		//the node at this level are just above the leaf node. Just go to next level to get leaf node
+		//bufMgr->readPage(file, currPageNum, currentPageData);
+		NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
+		int i;
+		for (i = 0; i< INTARRAYNONLEAFSIZE; i++) {
+			if(lowVal < curr->keyArray[i]) {
+				break;
+			}
+		}
+		currPageNum = curr->pageNoArray[i];
+		bufMgr->readPage(file, currPageNum, currentPageData);
+		//lowLeaf = (LeafNodeInt *) currentPageData; //currentPageData is the leaf node that stores low value
+	} else if (level == 0) {
+		//TODO: recursively traverse to get the node above the leaf node
+		NonLeafNodeInt *curr = (NonLeafNodeInt *) currentPageData;
+		int i;
+		for (i = 0; i< INTARRAYNONLEAFSIZE; i++) {
+			if(lowVal < curr->keyArray[i]) {
+				break;
+			}
+		}
+		currPageNum = curr->pageNoArray[i];
+		getLowLeaf(currPageNum, lowVal, curr->level);
+	}
+}
+
+
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::scanNext
@@ -168,7 +223,35 @@ const void BTreeIndex::startScan(const void* lowValParm,
 
 const void BTreeIndex::scanNext(RecordId& outRid) 
 {
+	if(!scanExecuting) {
+		throw ScanNotInitializedException();
+	}
 
+	//first scan the rest entries of current page
+	LeafNodeInt *curr = (LeafNodeInt *) currentPageData;
+	int i;
+	for (i = nextEntry; i < INTARRAYLEAFSIZE; i++) {
+		if(highValInt == curr->keyArray[i]) {
+			outRid = curr->ridArray[i];
+			return;
+		}
+	}
+	//now scan next page
+	PageId next = curr->rightSibPageNo;
+	bufMgr->unPinPage(file, currentPageNum, false);
+	currentPageNum = next;
+	bufMgr->readPage(file, currentPageNum, currentPageData);
+	curr = (LeafNodeInt *) currentPageData;
+	for (i = 0; i< INTARRAYLEAFSIZE; i++) {
+		if(highValInt = curr->keyArray[i]) {
+			outRid = curr->ridArray[i];
+			return;
+		}
+		nextEntry = i + 1;
+	}
+
+	//after scanning current and next page, still not find the record.
+	throw IndexScanCompletedException();
 }
 
 // -----------------------------------------------------------------------------
@@ -177,7 +260,11 @@ const void BTreeIndex::scanNext(RecordId& outRid)
 //
 const void BTreeIndex::endScan() 
 {
-
+	if (!scanExecuting) {
+		throw ScanNotInitializedException();
+	}
+	scanExecuting = false;
+	bufMgr->unPinPage(file, currentPageNum, false);
 }
 
 }
