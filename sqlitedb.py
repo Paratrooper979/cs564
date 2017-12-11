@@ -46,7 +46,7 @@ def getTime():
 # Note: if the `result' list is empty (i.e. there are no items for a
 # a given ID), this will throw an Exception!
 def getItemById(item_id):
-    query_string = 'select * from tems where ItemID = $itemID'
+    query_string = 'select * from Items where ItemID = $itemID'
     result = query(query_string, {'itemID': item_id})
     try:
         return result[0]
@@ -99,7 +99,7 @@ def updateItem(item_id, end_time, buy_price):
 
 
 def getUserById(user_id):
-    query_string = 'select * from Users where User_ID = $userID'
+    query_string = 'select * from Users where UserID = $userID'
     result = query(query_string, {'userID': user_id})
     try:
         return result[0]

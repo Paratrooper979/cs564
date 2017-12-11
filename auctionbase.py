@@ -154,12 +154,11 @@ class add_bid:
             sqlitedb.updateItem(item_id, time, amount)
             msg = '(Congratulations. Your bid %s achieves the buy_price and this %s is now yours)' % \
                   (amount, item.Name)
-            return render_template('add_bid.html', message=msg)
         else:
-            sqlitedb.addBid(user_id, item_id, amount, time)
             msg = '(You just added a bid on item %s)' % item.Name
-            return render_template('add_bid.html', message=msg)
 
+        sqlitedb.addBid(user_id, item_id, amount, time)
+        return render_template('add_bid.html', message=msg)
 
 class search:
 
