@@ -150,7 +150,7 @@ class add_bid:
         item.Currently = amount
 
         # Close the auction if amount is greater than buy_price the seller set
-        if amount >= item.Buy_Price:
+        if amount >= item.Buy_Price and item.Buy_Price is not None:
             sqlitedb.updateItem(item_id, time, amount)
             msg = '(Congratulations. Your bid %s achieves the buy_price and this %s is now yours)' % \
                   (amount, item.Name)
